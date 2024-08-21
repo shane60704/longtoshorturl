@@ -1,5 +1,6 @@
 package org.example.base62.service;
 
+import io.seruco.encoding.base62.Base62;
 import org.example.base62.dao.UrlDao;
 import org.example.base62.dto.shortenRequest;
 import org.slf4j.Logger;
@@ -12,8 +13,7 @@ import java.util.Random;
 @Service
 public class UrlServiceImpl implements UrlService {
     private static final String BASE_URL = "http://localhost:8080/";
-    private static final String BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    private static final int KEY_LENGTH = 7;
+    private static final String BASE62_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
     private static final Logger log = LoggerFactory.getLogger(UrlServiceImpl.class);
 
@@ -23,59 +23,32 @@ public class UrlServiceImpl implements UrlService {
     //長網址轉短網址主要邏輯
     @Override
     public String shortenUrl(shortenRequest shortenRequest){
-        String shortKey = generateShortUrl(shortenRequest.getLongUrl());
-        String shortUrl = BASE_URL+ shortKey;
+        //String shortUrl = BASE_URL+ shortKey;
 
-        //確認資料庫是否已有該長網址轉換之結果
-        String findLongUrlResult= urlDao.findLongUrl(shortenRequest.getLongUrl());
-        if( findLongUrlResult != null ){
-            return findLongUrlResult;
+        Integer id = urlDao.saveUrlInfo(shortenRequest.getLongUrl(),shortenRequest.getTtl());
+
+        if(id == null){
+            return null;
         }
 
-        //若無儲存網址轉換結果
-        if(urlDao.saveUrlInfo(shortenRequest.getLongUrl(),shortUrl,shortenRequest.getTtl()) != null){
-            return shortUrl;
-        }
-        return null;
+        String formattedId = String.format("%05d", id);
+        log.info("Generated shortened url id: " + formattedId);
+        Base62 base62 = Base62.createInstance();
+        byte[] encoded = base62.encode(formattedId.getBytes());
+        log.info(new String(encoded));
+        return BASE_URL+new String(encoded);
+
     }
 
     @Override
     public String getLongUrl(String shortKey) {
         // 兩種結果 1.longUrl(成功取得 url) 2.null(沒有該url)
-        log.info(BASE_URL+shortKey);
-        return urlDao.findLongUrlByShortUrl(BASE_URL+shortKey);
+        Base62 base62 = Base62.createInstance();
+        byte[] decoded = base62.decode(shortKey.getBytes());
+        String id = new String(decoded).replaceFirst("^0+(?!$)", "");
+        return urlDao.findLongUrlById(id);
     }
 
-    private String generateShortUrl(String longUrl) {
-        long asciiValue = getAsciiValue(longUrl);
-        String base62Encoded = encodeBase62(asciiValue);
-        return getRandomSubstring(base62Encoded);
-    }
 
-    private long getAsciiValue(String input) {
-        byte[] bytes = input.getBytes();
-        long asciiValue = 0;
-        for (byte b : bytes) {
-            asciiValue = (asciiValue * 256) + (b & 0xFF);
-        }
-        return asciiValue;
-    }
 
-    private String encodeBase62(long value) {
-        StringBuilder sb = new StringBuilder();
-        while (value > 0) {
-            sb.append(BASE62.charAt((int) (value % 62)));
-            value /= 62;
-        }
-        return sb.reverse().toString();
-    }
-
-    private String getRandomSubstring(String input) {
-        Random random = new Random();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < KEY_LENGTH; i++) {
-            sb.append(input.charAt(random.nextInt(input.length())));
-        }
-        return sb.toString();
-    }
 }
