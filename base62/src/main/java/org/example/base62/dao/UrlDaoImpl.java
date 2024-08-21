@@ -33,7 +33,7 @@ public class UrlDaoImpl implements UrlDao {
 //    }
 
     @Override
-    public Integer saveUrlInfo(String longUrl,int ttl){
+    public Integer saveUrlInfo(NamedParameterJdbcTemplate namedParameterJdbcTemplate,String longUrl,int ttl){
         String sql = "INSERT INTO info (long_url,ttl) VALUES (:longUrl, :ttl)";
         Map<String, Object> map = new HashMap<>();
         map.put("longUrl", longUrl);
@@ -64,7 +64,7 @@ public class UrlDaoImpl implements UrlDao {
     }
 
     @Override
-    public String findLongUrlById(String id) {
+    public String findLongUrlById(NamedParameterJdbcTemplate namedParameterJdbcTemplate,String id) {
         String sql = "SELECT long_url FROM info WHERE id=:id";
         Map<String, Object> map = new HashMap<>();
         map.put("id", id);
@@ -76,6 +76,5 @@ public class UrlDaoImpl implements UrlDao {
             throw new RuntimeException(e);
         }
     }
-
 
 }
