@@ -2,10 +2,12 @@ package org.example.base62.dao;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,9 +24,12 @@ public class UrlDaoImpl implements UrlDao {
         map.put("shortUrl", shortUrl);
         map.put("ttl", ttl);
         try {
-            return namedParameterJdbcTemplate.update(sql, map);
+            namedParameterJdbcTemplate.update(sql, map);
+            return 1;
+        } catch (DataIntegrityViolationException e){
+            return 0;
         } catch (DataAccessException e) {
-            return null;
+            throw new RuntimeException();
         }
     }
 

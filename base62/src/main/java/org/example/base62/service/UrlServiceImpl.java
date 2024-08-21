@@ -5,6 +5,7 @@ import org.example.base62.dto.shortenRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.util.Random;
@@ -22,28 +23,35 @@ public class UrlServiceImpl implements UrlService {
 
     //長網址轉短網址主要邏輯
     @Override
-    public String shortenUrl(shortenRequest shortenRequest){
+    public String shortenUrl(shortenRequest shortenRequest) {
         String shortKey = generateShortUrl(shortenRequest.getLongUrl());
-        String shortUrl = BASE_URL+ shortKey;
+        String shortUrl = BASE_URL + shortKey;
+        boolean state = true;
 
-        //確認資料庫是否已有該長網址轉換之結果
-        String findLongUrlResult= urlDao.findLongUrl(shortenRequest.getLongUrl());
-        if( findLongUrlResult != null ){
-            return findLongUrlResult;
-        }
-
-        //若無儲存網址轉換結果
-        if(urlDao.saveUrlInfo(shortenRequest.getLongUrl(),shortUrl,shortenRequest.getTtl()) != null){
+        try {
+            //確認資料庫是否已有該長網址轉換之結果
+            String findLongUrlResult = urlDao.findLongUrl(shortenRequest.getLongUrl());
+            if (findLongUrlResult != null) {
+                return findLongUrlResult;
+            }
+            //確保插入的數據不會重複
+            while (state) {
+                if(urlDao.saveUrlInfo(shortenRequest.getLongUrl(), shortUrl, shortenRequest.getTtl()) == 1){
+                    state = false;
+                }
+            }
             return shortUrl;
+        } catch (Exception e) {
+            log.info(e.getMessage());
+            return null;
         }
-        return null;
+
     }
 
     @Override
     public String getLongUrl(String shortKey) {
-        // 兩種結果 1.longUrl(成功取得 url) 2.null(沒有該url)
-        log.info(BASE_URL+shortKey);
-        return urlDao.findLongUrlByShortUrl(BASE_URL+shortKey);
+        // 兩種結果 - 1.longUrl(成功取得 url) 2.null(沒有該url)
+        return urlDao.findLongUrlByShortUrl(BASE_URL + shortKey);
     }
 
     private String generateShortUrl(String longUrl) {
