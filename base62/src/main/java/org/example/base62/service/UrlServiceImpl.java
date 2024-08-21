@@ -30,17 +30,20 @@ public class UrlServiceImpl implements UrlService {
 
         try {
             //確認資料庫是否已有該長網址轉換之結果
-            String findLongUrlResult = urlDao.findLongUrl(shortenRequest.getLongUrl());
-            if (findLongUrlResult != null) {
-                return findLongUrlResult;
+            if(urlDao.findLongUrl(shortenRequest.getLongUrl()).isEmpty() != true){
+                return urlDao.findLongUrl(shortenRequest.getLongUrl()).get(0);
             }
             //確保插入的數據不會重複
             while (state) {
+                log.info("while");
                 if(urlDao.saveUrlInfo(shortenRequest.getLongUrl(), shortUrl, shortenRequest.getTtl()) == 1){
                     state = false;
                 }
             }
+
+            log.info("shortenUrl returned: " + shortUrl);
             return shortUrl;
+
         } catch (Exception e) {
             log.info(e.getMessage());
             return null;

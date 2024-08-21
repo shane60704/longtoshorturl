@@ -7,8 +7,8 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Repository
@@ -34,13 +34,13 @@ public class UrlDaoImpl implements UrlDao {
     }
 
     @Override
-    public String findLongUrl(String longUrl) {
+    public List<String> findLongUrl(String longUrl) {
         String sql = "SELECT short_url FROM info WHERE long_url=:longUrl";
         Map<String, Object> map = new HashMap<>();
         map.put("longUrl", longUrl);
         try {
-            return namedParameterJdbcTemplate.queryForObject(sql, map, String.class);
-        } catch (EmptyResultDataAccessException e) {
+            return namedParameterJdbcTemplate.query(sql, map, (rs, rowNum) -> rs.getString("short_url"));
+        } catch (EmptyResultDataAccessException e ) {
             return null;
         } catch (DataAccessException e) {
             throw new RuntimeException(e);
